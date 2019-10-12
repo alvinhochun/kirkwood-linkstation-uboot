@@ -139,16 +139,16 @@ gd_t *global_data;
 #if GCC_VERSION < 3004
 static
 #endif /* GCC_VERSION */
-void __attribute__((unused)) dummy(void)
+void __attribute__((used)) dummy(void)
 {
 #include <_exports.h>
 }
 
+#if 1
 extern unsigned long __bss_start, _end;
-
 void app_startup(char **argv)
 {
-	unsigned long * cp = &__bss_start;
+	unsigned char * cp = &__bss_start;
 
 	/* Zero out BSS */
 	while (cp < &_end) {
@@ -161,5 +161,23 @@ void app_startup(char **argv)
 	jt = global_data->jt;
 #endif
 }
+#else
+extern unsigned long _bss_start, _bss_end;
+void app_startup(char **argv)
+{
+	unsigned long * cp = &_bss_start;
+
+	/* Zero out BSS */
+	while (cp < &_bss_end) {
+		*cp++ = 0;
+	}
+
+#if defined(CONFIG_I386)
+	/* x86 does not have a dedicated register for passing global_data */
+	global_data = (gd_t *)argv[-1];
+	jt = global_data->jt;
+#endif
+}
+#endif
 
 #undef EXPORT_FUNC

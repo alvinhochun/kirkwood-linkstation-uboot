@@ -30,7 +30,8 @@ LOAD_ADDR = 0x40000
 endif
 
 ifeq ($(ARCH),arm)
-LOAD_ADDR = 0xc100000
+#LOAD_ADDR = 0xc100000
+LOAD_ADDR = 0x100000
 endif
 
 ifeq ($(ARCH),mips)
@@ -54,6 +55,7 @@ LOAD_ADDR = 0x80F00000
 endif
 
 include $(TOPDIR)/config.mk
+include $(TOPDIR)/include/config.mk
 
 SREC	= hello_world.srec
 BIN	= hello_world.bin hello_world
@@ -97,6 +99,8 @@ endif
 
 OBJS	= $(SREC:.srec=.o)
 
+STAM 	= $(SREC:.srec=)
+
 LIB	= libstubs.a
 LIBAOBJS=
 ifeq ($(ARCH),ppc)
@@ -113,25 +117,30 @@ clibdir := $(shell dirname `$(CC) $(CFLAGS) -print-file-name=libc.a`)
 
 CPPFLAGS += -I..
 
-all:	.depend $(OBJS) $(LIB) $(SREC) $(BIN)
+all:	.depend $(OBJS) $(LIB) $(BIN) $(SREC)
 
 #########################################################################
 $(LIB): .depend $(LIBOBJS)
+	echo "lib.."
 	$(AR) crv $@ $(LIBOBJS)
 
-%:	%.o $(LIB)
+hello_world:	hello_world.o $(LIB)
+	echo "ld..."
 	$(LD) -g $(EX_LDFLAGS) -Ttext $(LOAD_ADDR) \
 		-o $@ -e $(<:.o=) $< $(LIB) \
 		-L$(gcclibdir) -lgcc
 %.srec:	%
+	echo "srec..."
 	$(OBJCOPY) -O srec $< $@ 2>/dev/null
 
-%.bin:	%
+%.bin:	hello_world
+	echo "bin..."
 	$(OBJCOPY) -O binary $< $@ 2>/dev/null
 
 #########################################################################
 
 .depend:	Makefile $(OBJS:.o=.c) $(LIBCOBJS:.o=.c) $(LIBAOBJS:.o=.S)
+		echo "CC.."
 		$(CC) -M $(CFLAGS) $(OBJS:.o=.c) $(LIBCOBJS:.o=.c) $(LIBAOBJS:.o=.S) > $@
 
 sinclude .depend

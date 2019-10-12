@@ -289,7 +289,6 @@ int _do_setenv (int flag, int argc, char *argv[])
 		env_crc_update ();
 		return 0;
 	}
-
 	/*
 	 * Append new definition at the end
 	 */
@@ -530,7 +529,7 @@ int getenv_r (char *name, char *buf, unsigned len)
 	return (-1);
 }
 
-#if defined(CFG_ENV_IS_IN_NVRAM) || defined(CFG_ENV_IS_IN_EEPROM) || \
+#if defined(CFG_ENV_IS_IN_NVRAM) || defined(CFG_ENV_IS_IN_EEPROM) || defined(CFG_ENV_IS_IN_NAND) || \
     ((CONFIG_COMMANDS & (CFG_CMD_ENV|CFG_CMD_FLASH)) == \
       (CFG_CMD_ENV|CFG_CMD_FLASH))
 int do_saveenv (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
@@ -586,7 +585,7 @@ U_BOOT_CMD(
 	"    - delete environment variable 'name'\n"
 );
 
-#if defined(CFG_ENV_IS_IN_NVRAM) || defined(CFG_ENV_IS_IN_EEPROM) || \
+#if defined(CFG_ENV_IS_IN_NVRAM) || defined(CFG_ENV_IS_IN_EEPROM) || defined(CFG_ENV_IS_IN_NAND) || \
     ((CONFIG_COMMANDS & (CFG_CMD_ENV|CFG_CMD_FLASH)) == \
       (CFG_CMD_ENV|CFG_CMD_FLASH))
 U_BOOT_CMD(

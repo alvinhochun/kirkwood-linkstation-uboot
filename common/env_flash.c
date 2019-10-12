@@ -160,6 +160,14 @@ int saveenv(void)
 	ulong up_data = 0;
 #endif
 
+#ifdef CONFIG_MARVELL
+	if (whoAmI())
+	{
+	    puts ("Only Master CPU can saveenv!\n");
+	    return 0;
+	}
+#endif
+
 	debug ("Protect off %08lX ... %08lX\n",
 		(ulong)flash_addr, end_addr);
 
@@ -261,15 +269,25 @@ Done:
 int  env_init(void)
 {
 	DECLARE_GLOBAL_DATA_PTR;
+    unsigned int tmpBuf[CFG_ENV_SIZE];
 #ifdef CONFIG_OMAP2420H4
 	int flash_probe(void);
 
 	if(flash_probe() == 0)
 		goto bad_flash;
 #endif
-	if (crc32(0, env_ptr->data, ENV_SIZE) == env_ptr->crc) {
-		gd->env_addr  = (ulong)&(env_ptr->data);
-		gd->env_valid = 1;
+#if defined(CONFIG_MARVELL) && defined(MV_SPI_BOOT)
+        mvMPPConfigToSPI();
+        memcpyFlash(env_ptr, tmpBuf, CFG_ENV_SIZE);
+        if (crc32(0, &tmpBuf[1], ENV_SIZE) == tmpBuf[0]) {
+            gd->env_addr  = (ulong)&(env_ptr->data);
+            gd->env_valid = 1;
+        mvMPPConfigToDefault();
+#else
+        if (crc32(0, env_ptr->data, ENV_SIZE) == env_ptr->crc) {
+            gd->env_addr  = (ulong)&(env_ptr->data);
+            gd->env_valid = 1;
+#endif
 		return(0);
 	}
 #ifdef CONFIG_OMAP2420H4
@@ -295,6 +313,14 @@ int saveenv(void)
 #endif	/* CFG_ENV_SECT_SIZE */
 	int rcode = 0;
 
+#ifdef CONFIG_MARVELL
+	if (whoAmI())
+	{
+	    puts ("Only Master CPU can saveenv!\n");
+	    return 0;
+	}
+#endif
+
 #if defined(CFG_ENV_SECT_SIZE) && (CFG_ENV_SECT_SIZE > CFG_ENV_SIZE)
 
 	flash_offset    = ((ulong)flash_addr) & (CFG_ENV_SECT_SIZE-1);
@@ -305,7 +331,11 @@ int saveenv(void)
 		flash_sect_addr, (ulong)flash_addr, flash_offset);
 
 	/* copy old contents to temporary buffer */
+#if defined(CONFIG_MARVELL) && defined(MV_SPI_BOOT)
+    memcpyFlash(flash_sect_addr, (void*)env_buffer, CFG_ENV_SECT_SIZE);
+#else 
 	memcpy (env_buffer, (void *)flash_sect_addr, CFG_ENV_SECT_SIZE);
+#endif
 
 	/* copy current environment to temporary buffer */
 	memcpy ((uchar *)((unsigned long)env_buffer + flash_offset),
@@ -400,7 +430,11 @@ void env_relocate_spec (void)
 		puts ("*** Warning - some problems detected "
 		      "reading environment; recovered successfully\n\n");
 #endif /* CFG_ENV_ADDR_REDUND */
+#if defined(CONFIG_MARVELL) && defined(MV_SPI_BOOT)
+    memcpyFlash(flash_addr, (void*)env_ptr, CFG_ENV_SIZE);
+#else 
 	memcpy (env_ptr, (void*)flash_addr, CFG_ENV_SIZE);
+#endif
 #endif /* ! ENV_IS_EMBEDDED || CFG_ENV_ADDR_REDUND */
 }
 

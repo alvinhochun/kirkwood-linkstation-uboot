@@ -25,5 +25,8 @@
 #define	__VERSION_H__
 
 #define	U_BOOT_VERSION	"U-Boot 1.1.4"
+#if defined(CONFIG_BUFFALO_PLATFORM)
+#define BUFFALO_VERSION	"BOOTVER=0.27"
+#endif
 
 #endif	/* __VERSION_H__ */

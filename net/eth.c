@@ -53,12 +53,29 @@ extern int rtl8169_initialize(bd_t*);
 extern int scc_initialize(bd_t*);
 extern int skge_initialize(bd_t*);
 extern int tsec_initialize(bd_t*, int, char *);
+extern int mv_eth_initialize(bd_t *);
+#ifdef MV78200
+extern int mvSocUnitIsMappedToThisCpu(int unit);
+#define GIGA0	4
+#endif
 
-static struct eth_device *eth_devices, *eth_current;
+extern unsigned int whoAmI(void);
+static struct eth_device *eth_devices; 
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+static struct eth_device *eth_current[2];
+static char* ethact[2] = {"ethact", "ethact2"};
+#else
+static struct eth_device *eth_current[1];
+static char* ethact[1] = {"ethact"}; 
+#endif
 
 struct eth_device *eth_get_dev(void)
 {
-	return eth_current;
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
+	return eth_current[cpu];
 }
 
 struct eth_device *eth_get_dev_by_name(char *devname)
@@ -85,13 +102,17 @@ int eth_get_dev_index (void)
 {
 	struct eth_device *dev;
 	int num = 0;
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
 
 	if (!eth_devices) {
 		return (-1);
 	}
 
 	for (dev = eth_devices; dev; dev = dev->next) {
-		if (dev == eth_current)
+		if (dev == eth_current[cpu])
 			break;
 		++num;
 	}
@@ -106,15 +127,19 @@ int eth_get_dev_index (void)
 int eth_register(struct eth_device* dev)
 {
 	struct eth_device *d;
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
 
 	if (!eth_devices) {
-		eth_current = eth_devices = dev;
+		eth_current[cpu] = eth_devices = dev;
 #ifdef CONFIG_NET_MULTI
 		/* update current ethernet name */
 		{
-			char *act = getenv("ethact");
-			if (act == NULL || strcmp(act, eth_current->name) != 0)
-				setenv("ethact", eth_current->name);
+			char *act = getenv(ethact[cpu]);
+			if (act == NULL || strcmp(act, eth_current[cpu]->name) != 0)
+				setenv(ethact[cpu], eth_current[cpu]->name);
 		}
 #endif
 	} else {
@@ -130,13 +155,21 @@ int eth_register(struct eth_device* dev)
 
 int eth_initialize(bd_t *bis)
 {
-	char enetvar[32], env_enetaddr[6];
-	int i, eth_number = 0;
-	char *tmp, *end;
-
+	int eth_number = 0;
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
 	eth_devices = NULL;
-	eth_current = NULL;
+	eth_current[cpu] = NULL;
 
+#ifdef  CONFIG_MARVELL
+#if defined(MV_INCLUDE_GIG_ETH) || defined(MV_INCLUDE_UNM_ETH)
+	/* move to the begining so in case we have a PCI NIC it will
+        read the env mac addresses correctlly. */
+        mv_eth_initialize(bis);
+#endif
+#endif
 #if defined(CONFIG_MII) || (CONFIG_COMMANDS & CFG_CMD_MII)
 	miiphy_init();
 #endif
@@ -239,16 +272,18 @@ int eth_initialize(bd_t *bis)
 		char *ethprime = getenv ("ethprime");
 
 		do {
+
 			if (eth_number)
 				puts (", ");
 
 			printf("%s", dev->name);
 
 			if (ethprime && strcmp (dev->name, ethprime) == 0) {
-				eth_current = dev;
+				eth_current[cpu] = dev;
 				puts (" [PRIME]");
 			}
 
+#ifndef  CONFIG_MARVELL
 			sprintf(enetvar, eth_number ? "eth%daddr" : "ethaddr", eth_number);
 			tmp = getenv (enetvar);
 
@@ -278,19 +313,19 @@ int eth_initialize(bd_t *bis)
 
 				memcpy(dev->enetaddr, env_enetaddr, 6);
 			}
-
+#endif
 			eth_number++;
 			dev = dev->next;
 		} while(dev != eth_devices);
 
 #ifdef CONFIG_NET_MULTI
 		/* update current ethernet name */
-		if (eth_current) {
-			char *act = getenv("ethact");
-			if (act == NULL || strcmp(act, eth_current->name) != 0)
-				setenv("ethact", eth_current->name);
+		if (eth_current[cpu]) {
+			char *act = getenv(ethact[cpu]);
+			if (act == NULL || strcmp(act, eth_current[cpu]->name) != 0)
+				setenv(ethact[cpu], eth_current[cpu]->name);
 		} else
-			setenv("ethact", NULL);
+			setenv(ethact[cpu], NULL);
 #endif
 
 		putc ('\n');
@@ -337,76 +372,98 @@ void eth_set_enetaddr(int num, char *addr) {
 int eth_init(bd_t *bis)
 {
 	struct eth_device* old_current;
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
 
-	if (!eth_current)
+	if (!eth_current[cpu])
 		return 0;
 
-	old_current = eth_current;
+	old_current = eth_current[cpu];
 	do {
-		debug ("Trying %s\n", eth_current->name);
+		debug ("Trying %s\n", eth_current[cpu]->name);
 
-		if (eth_current->init(eth_current, bis)) {
-			eth_current->state = ETH_STATE_ACTIVE;
+		if (eth_current[cpu]->init(eth_current[cpu], bis)) {
+			eth_current[cpu]->state = ETH_STATE_ACTIVE;
 
 			return 1;
 		}
 		debug  ("FAIL\n");
 
 		eth_try_another(0);
-	} while (old_current != eth_current);
+	} while (old_current != eth_current[cpu]);
 
 	return 0;
 }
 
 void eth_halt(void)
 {
-	if (!eth_current)
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
+	
+	if (!eth_current[cpu])
 		return;
 
-	eth_current->halt(eth_current);
+	eth_current[cpu]->halt(eth_current[cpu]);
 
-	eth_current->state = ETH_STATE_PASSIVE;
+	eth_current[cpu]->state = ETH_STATE_PASSIVE;
 }
 
 int eth_send(volatile void *packet, int length)
 {
-	if (!eth_current)
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
+
+	if (!eth_current[cpu])
 		return -1;
 
-	return eth_current->send(eth_current, packet, length);
+	return eth_current[cpu]->send(eth_current[cpu], packet, length);
 }
 
 int eth_rx(void)
 {
-	if (!eth_current)
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
+	if (!eth_current[cpu])
 		return -1;
 
-	return eth_current->recv(eth_current);
+	return eth_current[cpu]->recv(eth_current[cpu]);
 }
 
 void eth_try_another(int first_restart)
 {
 	static struct eth_device *first_failed = NULL;
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
 
-	if (!eth_current)
+	if (!eth_current[cpu])
 		return;
 
 	if (first_restart) {
-		first_failed = eth_current;
+		first_failed = eth_current[cpu];
 	}
 
-	eth_current = eth_current->next;
+	eth_current[cpu] = eth_current[cpu]->next;
 
 #ifdef CONFIG_NET_MULTI
 	/* update current ethernet name */
 	{
-		char *act = getenv("ethact");
-		if (act == NULL || strcmp(act, eth_current->name) != 0)
-			setenv("ethact", eth_current->name);
+		char *act = getenv(ethact[cpu]);
+		if (act == NULL || strcmp(act, eth_current[cpu]->name) != 0)
+			setenv(ethact[cpu], eth_current[cpu]->name);
 	}
 #endif
 
-	if (first_failed == eth_current) {
+	if (first_failed == eth_current[cpu]) {
 		NetRestartWrap = 1;
 	}
 }
@@ -416,27 +473,36 @@ void eth_set_current(void)
 {
 	char *act;
 	struct eth_device* old_current;
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
 
-	if (!eth_current)	/* XXX no current */
+	if (!eth_current[cpu])	/* XXX no current */
 		return;
 
-	act = getenv("ethact");
+	act = getenv(ethact[cpu]);
 	if (act != NULL) {
-		old_current = eth_current;
+		old_current = eth_current[cpu];
 		do {
-			if (strcmp(eth_current->name, act) == 0)
+			if (strcmp(eth_current[cpu]->name, act) == 0)
 				return;
-			eth_current = eth_current->next;
-		} while (old_current != eth_current);
+			eth_current[cpu] = eth_current[cpu]->next;
+		} while (old_current != eth_current[cpu]);
 	}
 
-	setenv("ethact", eth_current->name);
+	setenv(ethact[cpu], eth_current[cpu]->name);
 }
 #endif
 
 char *eth_get_name (void)
 {
-	return (eth_current ? eth_current->name : "unknown");
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
+
+	return (eth_current[cpu] ? eth_current[cpu]->name : "unknown");
 }
 #elif (CONFIG_COMMANDS & CFG_CMD_NET) && !defined(CONFIG_NET_MULTI)
 

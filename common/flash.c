@@ -21,7 +21,7 @@
  * MA 02111-1307 USA
  */
 
-/* #define DEBUG */
+/* #define DEBUG  */
 
 #include <common.h>
 #include <flash.h>

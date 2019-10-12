@@ -136,6 +136,7 @@ uchar default_environment[] = {
 #ifdef  CONFIG_EXTRA_ENV_SETTINGS
 	CONFIG_EXTRA_ENV_SETTINGS
 #endif
+    "run_diag="     "yes"   "\0"
 	"\0"
 };
 
@@ -258,7 +259,13 @@ void env_relocate (void)
 		gd->env_valid = 1;
 	}
 	else {
+#ifdef CONFIG_MARVELL
+        mvMPPConfigToSPI();
 		env_relocate_spec ();
+        mvMPPConfigToDefault();
+#else
+        env_relocate_spec ();
+#endif
 	}
 	gd->env_addr = (ulong)&(env_ptr->data);
 
@@ -305,5 +312,45 @@ int env_complete(char *var, int maxv, char *cmdv[], int bufsz, char *buf)
 
 	cmdv[found] = NULL;
 	return found;
+}
+#endif
+
+#if defined(CONFIG_BUFFALO_PLATFORM)
+void
+bfKeepEthAddr(void)
+{
+	extern env_t *env_ptr;
+	env_t tmp_env;
+	char *env;
+	char ethaddr[18];
+	char eth1addr[18];
+
+	memset(ethaddr, 0, sizeof(ethaddr));
+	memset(eth1addr, 0, sizeof(eth1addr));
+
+	env = getenv("ethaddr");
+	if (env)
+		strcpy(ethaddr, env);
+
+	env = getenv("eth1addr");
+	if (env)
+		strcpy(eth1addr, env);
+
+	tmp_env = *env_ptr;
+	memcpy(env_ptr->data, default_environment, sizeof(default_environment));
+
+	if (ethaddr[0] && strncmp(ethaddr, "00:50:43", 8) != 0) {
+		setenv("ethaddr", ethaddr);
+	}
+
+	if (eth1addr[0] && strncmp(eth1addr, "00:50:43", 8) != 0) {
+		setenv("eth1addr", eth1addr);
+	}
+
+	env_crc_update();
+	if (saveenv() != 0)
+		printf("%s > saveenv failed.\n", __FUNCTION__);
+
+	*env_ptr = tmp_env;
 }
 #endif

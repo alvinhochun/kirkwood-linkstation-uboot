@@ -144,6 +144,11 @@
 static struct part_info *current_part;
 
 #if defined(CONFIG_JFFS2_NAND) && (CONFIG_COMMANDS & CFG_CMD_NAND)
+#if defined(CFG_NAND_LEGACY)
+#include <linux/mtd/nand_legacy.h>
+#else
+#include <nand.h>
+#endif
 /*
  * Support for jffs2 on top of NAND-flash
  *
@@ -154,9 +159,14 @@ static struct part_info *current_part;
  *
  */
 
-/* this one defined in cmd_nand.c */
+#if defined(CFG_NAND_LEGACY)
+/* this one defined in nand_legacy.c */
 int read_jffs2_nand(size_t start, size_t len,
-		    size_t * retlen, u_char * buf, int nanddev);
+		size_t * retlen, u_char * buf, int nanddev);
+#else
+/* info for NAND chips, defined in drivers/nand/nand.c */
+extern nand_info_t nand_info[];
+#endif
 
 #define NAND_PAGE_SIZE 512
 #define NAND_PAGE_SHIFT 9
@@ -174,7 +184,11 @@ static int read_nand_cached(u32 off, u32 size, u_char *buf)
 {
 	struct mtdids *id = current_part->dev->id;
 	u32 bytes_read = 0;
+#if defined(CFG_NAND_LEGACY)
 	size_t retlen;
+#else
+	ulong retlen;
+#endif
 	int cpy_bytes;
 
 	while (bytes_read < size) {
@@ -191,6 +205,8 @@ static int read_nand_cached(u32 off, u32 size, u_char *buf)
 					return -1;
 				}
 			}
+
+#if defined(CFG_NAND_LEGACY)
 			if (read_jffs2_nand(nand_cache_off, NAND_CACHE_SIZE,
 						&retlen, nand_cache, id->num) < 0 ||
 					retlen != NAND_CACHE_SIZE) {
@@ -198,6 +214,16 @@ static int read_nand_cached(u32 off, u32 size, u_char *buf)
 						nand_cache_off, NAND_CACHE_SIZE);
 				return -1;
 			}
+#else
+			retlen = NAND_CACHE_SIZE;
+			if (nand_read(&nand_info[id->num], nand_cache_off,
+						&retlen, nand_cache) != 0 ||
+					retlen != NAND_CACHE_SIZE) {
+				printf("read_nand_cached: error reading nand off %#x size %d bytes\n",
+						nand_cache_off, NAND_CACHE_SIZE);
+				return -1;
+			}
+#endif
 		}
 		cpy_bytes = nand_cache_off + NAND_CACHE_SIZE - (off + bytes_read);
 		if (cpy_bytes > size - bytes_read)
@@ -637,8 +663,12 @@ jffs2_1pass_read_inode(struct b_lists *pL, u32 inode, char *dest)
 				putLabeledWord("read_inode: dest = ", lDest);
 #endif
 				switch (jNode->compr) {
-				case JFFS2_COMPR_NONE:
+                case JFFS2_COMPR_NONE:
+#ifdef MV_INC_BOARD_SPI_FLASH
+					ret = (unsigned long) memcpyFlash(lDest, src, jNode->dsize);
+#else
 					ret = (unsigned long) ldr_memcpy(lDest, src, jNode->dsize);
+#endif
 					break;
 				case JFFS2_COMPR_ZERO:
 					ret = 0;
@@ -1167,7 +1197,8 @@ jffs2_1pass_build_lists(struct part_info * part)
 		if (node->magic == JFFS2_MAGIC_BITMASK && hdr_crc(node)) {
 			/* if its a fragment add it */
 			if (node->nodetype == JFFS2_NODETYPE_INODE &&
-				    inode_crc((struct jffs2_raw_inode *) node)) {
+				    inode_crc((struct jffs2_raw_inode *) node) &&
+				    data_crc((struct jffs2_raw_inode *) node)) {
 				if (insert_node(&pL->frag, (u32) part->offset +
 						offset) == NULL) {
 					put_fl_mem(node);

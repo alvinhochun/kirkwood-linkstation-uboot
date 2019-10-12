@@ -38,6 +38,8 @@
 #include <ft_build.h>
 #endif
 
+extern unsigned int whoAmI(void);
+
  /*cmd_boot.c*/
  extern int do_reset (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 
@@ -140,7 +142,11 @@ static boot_os_Fcn do_bootm_lynxkdi;
 extern void lynxkdi_boot( image_header_t * );
 #endif
 
-image_header_t header;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+image_header_t header[2];
+#else
+image_header_t header[1];
+#endif
 
 ulong load_addr = CFG_LOAD_ADDR;		/* Default Load Address */
 
@@ -154,7 +160,13 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	int	i, verify;
 	char	*name, *s;
 	int	(*appl)(int, char *[]);
-	image_header_t *hdr = &header;
+	unsigned int cpu = 0;
+	image_header_t *hdr;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
+
+	hdr = &header[cpu];
 
 	s = getenv ("verify");
 	verify = (s && (*s == 'n')) ? 0 : 1;
@@ -171,11 +183,11 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	/* Copy header so we can blank CRC field for re-calculation */
 #ifdef CONFIG_HAS_DATAFLASH
 	if (addr_dataflash(addr)){
-		read_dataflash(addr, sizeof(image_header_t), (char *)&header);
+		read_dataflash(addr, sizeof(image_header_t), (char *)&header[cpu]);
 	} else
 #endif
-	memmove (&header, (char *)addr, sizeof(image_header_t));
-
+	memmove (&header[cpu], (char *)addr, sizeof(image_header_t));
+	
 	if (ntohl(hdr->ih_magic) != IH_MAGIC) {
 #ifdef __I386__	/* correct image format not implemented yet - fake it */
 		if (fake_header(hdr, (void*)addr, -1) != NULL) {
@@ -195,7 +207,7 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	}
 	SHOW_BOOT_PROGRESS (2);
 
-	data = (ulong)&header;
+	data = (ulong)&header[cpu];
 	len  = sizeof(image_header_t);
 
 	checksum = ntohl(hdr->ih_hcrc);
@@ -222,7 +234,6 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 
 	data = addr + sizeof(image_header_t);
 	len  = ntohl(hdr->ih_size);
-
 	if (verify) {
 		puts ("   Verifying Checksum ... ");
 		if (crc32 (0, (uchar *)data, len) != ntohl(hdr->ih_dcrc)) {
@@ -519,11 +530,17 @@ do_bootm_linux (cmd_tbl_t *cmdtp, int flag,
 	char	*s;
 	bd_t	*kbd;
 	void	(*kernel)(bd_t *, ulong, ulong, ulong, ulong);
-	image_header_t *hdr = &header;
+	unsigned int cpu = 0;
+	image_header_t *hdr;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
+	
 #ifdef CONFIG_OF_FLAT_TREE
 	char	*of_flat_tree;
 #endif
 
+	hdr = &header[cpu];
 	if ((s = getenv ("initrd_high")) != NULL) {
 		/* a value of "no" or a similar string will act like 0,
 		 * turning the "load high" feature off. This is intentional.
@@ -567,8 +584,7 @@ do_bootm_linux (cmd_tbl_t *cmdtp, int flag,
 	cmdline = (char *)((sp - CFG_BARGSIZE) & ~0xF);
 	kbd = (bd_t *)(((ulong)cmdline - sizeof(bd_t)) & ~0xF);
 
-	if ((s = getenv("bootargs")) == NULL)
-		s = "";
+	if ((s = getenv("bootargs")) == NULL) s = "";
 
 	strcpy (cmdline, s);
 
@@ -578,6 +594,7 @@ do_bootm_linux (cmd_tbl_t *cmdtp, int flag,
 	*kbd = *(gd->bd);
 
 #ifdef	DEBUG
+	printf ("## cmdline is %s\n", cmdline);
 	printf ("## cmdline at 0x%08lX ... 0x%08lX\n", cmd_start, cmd_end);
 
 	do_bdinfo (NULL, 0, 0, NULL);
@@ -619,7 +636,7 @@ do_bootm_linux (cmd_tbl_t *cmdtp, int flag,
 		printf ("## Loading RAMDisk Image at %08lx ...\n", addr);
 
 		/* Copy header so we can blank CRC field for re-calculation */
-		memmove (&header, (char *)addr, sizeof(image_header_t));
+		memmove (&header[cpu], (char *)addr, sizeof(image_header_t));
 
 		if (hdr->ih_magic  != IH_MAGIC) {
 			puts ("Bad Magic Number\n");
@@ -627,7 +644,7 @@ do_bootm_linux (cmd_tbl_t *cmdtp, int flag,
 			do_reset (cmdtp, flag, argc, argv);
 		}
 
-		data = (ulong)&header;
+		data = (ulong)&header[cpu];
 		len  = sizeof(image_header_t);
 
 		checksum = hdr->ih_hcrc;
@@ -839,6 +856,16 @@ do_bootm_linux (cmd_tbl_t *cmdtp, int flag,
 }
 #endif /* CONFIG_PPC */
 
+#ifdef CONFIG_MARVELL
+char extraBootArgs[200];
+
+/* NetBSD Stage-2 Loader Parameters:
+*   r6: boot args string
+*/
+#define DECLARE_NETBSD_CMDLINE
+register volatile char *cmdline asm ("r6");
+#endif
+
 static void
 do_bootm_netbsd (cmd_tbl_t *cmdtp, int flag,
 		int	argc, char *argv[],
@@ -847,14 +874,24 @@ do_bootm_netbsd (cmd_tbl_t *cmdtp, int flag,
 		int	verify)
 {
 	DECLARE_GLOBAL_DATA_PTR;
-
-	image_header_t *hdr = &header;
-
+#ifdef CONFIG_MARVELL
+	DECLARE_NETBSD_CMDLINE;
+#else
+	char *cmdline;
+#endif
+	image_header_t *hdr;
+	unsigned int cpu = 0;
+	bd_t *bd = gd->bd;
+	
 	void	(*loader)(bd_t *, image_header_t *, char *, char *);
 	image_header_t *img_addr;
 	char     *consdev;
-	char     *cmdline;
 
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
+
+    hdr = &header[cpu];
 
 	/*
 	 * Booting a (NetBSD) kernel image
@@ -887,9 +924,27 @@ do_bootm_netbsd (cmd_tbl_t *cmdtp, int flag,
 	if (argc > 2) {
 		ulong len;
 		int   i;
+#ifdef CONFIG_MARVELL
+		unsigned int mvBoardIdGet(void);
+		char buf[30];
+		sprintf(extraBootArgs ,"boardId=%x",mvBoardIdGet()); 
+
+		for (i = 0; i < 4; i++) 
+		{
+			sprintf(buf ," dram%d_start=%x",i, bd->bi_dram[i].start);
+			strcat(extraBootArgs, buf); 
+			sprintf(buf ," dram%d_size=%x",i, bd->bi_dram[i].size);
+			strcat(extraBootArgs, buf); 
+		}
+
+#endif
 
 		for (i=2, len=0 ; i<argc ; i+=1)
 			len += strlen (argv[i]) + 1;
+#ifdef CONFIG_MARVELL
+		/* Adding BoardId */
+		len += strlen(extraBootArgs) + 1;
+#endif
 		cmdline = malloc (len);
 
 		for (i=2, len=0 ; i<argc ; i+=1) {
@@ -898,11 +953,19 @@ do_bootm_netbsd (cmd_tbl_t *cmdtp, int flag,
 			strcpy (&cmdline[len], argv[i]);
 			len += strlen (argv[i]);
 		}
+#ifdef CONFIG_MARVELL
+		/* Adding BoardId */
+		if (i > 2) cmdline[len++] = ' ';
+		strcpy (&cmdline[len], extraBootArgs);
+		len += strlen (extraBootArgs);
+#endif
+		
+
 	} else if ((cmdline = getenv("bootargs")) == NULL) {
 		cmdline = "";
 	}
 
-	loader = (void (*)(bd_t *, image_header_t *, char *, char *)) hdr->ih_ep;
+	loader = (void (*)(bd_t *, image_header_t *, char *, char *))ntohl(hdr->ih_ep);
 
 	printf ("## Transferring control to NetBSD stage-2 loader (at address %08lx) ...\n",
 		(ulong)loader);
@@ -938,7 +1001,14 @@ do_bootm_artos (cmd_tbl_t *cmdtp, int flag,
 	int i, j, nxt, len, envno, envsz;
 	bd_t *kbd;
 	void (*entry)(bd_t *bd, char *cmdline, char **fwenv, ulong top);
-	image_header_t *hdr = &header;
+	unsigned int cpu = 0;
+	image_header_t *hdr;
+
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
+
+	hdr = &header[cpu];
 
 	/*
 	 * Booting an ARTOS kernel image + application
@@ -1017,7 +1087,16 @@ int do_bootd (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {
 	int rcode = 0;
 #ifndef CFG_HUSH_PARSER
-	if (run_command (getenv ("bootcmd"), flag) < 0) rcode = 1;
+#if defined(CONFIG_MARVELL) && (defined(DUAL_OS_78200) || defined(DUAL_OS_SHARED_MEM_78200))
+	if (whoAmI() == 1)
+	{
+		if (run_command (getenv ("bootcmd2"), flag) < 0) rcode = 1;
+	}
+	else
+#endif
+	{
+		if (run_command (getenv ("bootcmd"), flag) < 0) rcode = 1;
+	}
 #else
 	if (parse_string_outer(getenv("bootcmd"),
 		FLAG_PARSE_SEMICOLON | FLAG_EXIT_FROM_LOOP) != 0 ) rcode = 1;
@@ -1046,6 +1125,10 @@ int do_iminfo ( cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	int	arg;
 	ulong	addr;
 	int     rcode=0;
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
 
 	if (argc < 2) {
 		return image_info (load_addr);
@@ -1061,19 +1144,23 @@ int do_iminfo ( cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 static int image_info (ulong addr)
 {
 	ulong	data, len, checksum;
-	image_header_t *hdr = &header;
-
+	image_header_t *hdr;
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
+	hdr = &header[cpu];
 	printf ("\n## Checking Image at %08lx ...\n", addr);
 
 	/* Copy header so we can blank CRC field for re-calculation */
-	memmove (&header, (char *)addr, sizeof(image_header_t));
+	memmove (&header[cpu], (char *)addr, sizeof(image_header_t));
 
 	if (ntohl(hdr->ih_magic) != IH_MAGIC) {
 		puts ("   Bad Magic Number\n");
 		return 1;
 	}
 
-	data = (ulong)&header;
+	data = (ulong)&header[cpu];
 	len  = sizeof(image_header_t);
 
 	checksum = ntohl(hdr->ih_hcrc);
@@ -1120,7 +1207,11 @@ int do_imls (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	int i, j;
 	image_header_t *hdr;
 	ulong data, len, checksum;
-
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif
+    
 	for (i=0, info=&flash_info[0]; i<CFG_MAX_FLASH_BANKS; ++i, ++info) {
 		if (info->flash_id == FLASH_UNKNOWN)
 			goto next_bank;
@@ -1131,12 +1222,12 @@ int do_imls (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 				goto next_sector;
 
 			/* Copy header so we can blank CRC field for re-calculation */
-			memmove (&header, (char *)hdr, sizeof(image_header_t));
+			memmove (&header[cpu], (char *)hdr, sizeof(image_header_t));
 
-			checksum = ntohl(header.ih_hcrc);
-			header.ih_hcrc = 0;
+			checksum = ntohl(header[cpu].ih_hcrc);
+			header[cpu].ih_hcrc = 0;
 
-			if (crc32 (0, (uchar *)&header, sizeof(image_header_t))
+			if (crc32 (0, (uchar *)&header[cpu], sizeof(image_header_t))
 			    != checksum)
 				goto next_sector;
 
@@ -1189,7 +1280,6 @@ print_image_hdr (image_header_t *hdr)
 	printf ("   Load Address: %08x\n"
 		"   Entry Point:  %08x\n",
 		 ntohl(hdr->ih_load), ntohl(hdr->ih_ep));
-
 	if (hdr->ih_type == IH_TYPE_MULTI) {
 		int i;
 		ulong len;
@@ -1361,7 +1451,13 @@ do_bootm_rtems (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[],
 		ulong addr, ulong *len_ptr, int verify)
 {
 	DECLARE_GLOBAL_DATA_PTR;
-	image_header_t *hdr = &header;
+	unsigned int cpu = 0;
+	image_header_t *hdr;
+#ifdef MV78XX0
+	cpu = whoAmI();
+#endif
+
+	hdr = &header[cpu];
 	void	(*entry_point)(bd_t *);
 
 	entry_point = (void (*)(bd_t *)) hdr->ih_ep;
@@ -1384,9 +1480,14 @@ static void
 do_bootm_vxworks (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[],
 		  ulong addr, ulong *len_ptr, int verify)
 {
-	image_header_t *hdr = &header;
+	unsigned int cpu = 0;
+	image_header_t *hdr;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif	
 	char str[80];
 
+	hdr = &header[cpu];
 	sprintf(str, "%x", hdr->ih_ep); /* write entry-point into string */
 	setenv("loadaddr", str);
 	do_bootvx(cmdtp, 0, 0, NULL);
@@ -1396,9 +1497,14 @@ static void
 do_bootm_qnxelf (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[],
 		 ulong addr, ulong *len_ptr, int verify)
 {
-	image_header_t *hdr = &header;
+	image_header_t *hdr;
 	char *local_args[2];
 	char str[16];
+	unsigned int cpu = 0;
+#ifdef MV78XX0
+	cpu = whoAmI();
+#endif	
+	hdr = &header[cpu];
 
 	sprintf(str, "%x", hdr->ih_ep); /* write entry-point into string */
 	local_args[0] = argv[0];
@@ -1415,7 +1521,11 @@ do_bootm_lynxkdi (cmd_tbl_t *cmdtp, int flag,
 		 ulong	*len_ptr,
 		 int	verify)
 {
-	lynxkdi_boot( &header );
+	unsigned int cpu = 0;
+#if defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+	cpu = whoAmI();
+#endif	
+	lynxkdi_boot( &header[cpu] );
 }
 
 #endif /* CONFIG_LYNXKDI */

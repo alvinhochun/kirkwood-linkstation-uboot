@@ -200,7 +200,8 @@ int do_ext2load (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		break;
 
 	default:
-		printf ("Usage:\n%s\n", cmdtp->usage);
+		if (cmdtp)
+			printf ("Usage:\n%s\n", cmdtp->usage);
 		return(1);
 	}
 
@@ -264,6 +265,7 @@ int do_ext2load (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		ext2fs_close();
 		return(1);
 	}
+
 	if ((count < filelen) && (count != 0)) {
 	    filelen = count;
 	}

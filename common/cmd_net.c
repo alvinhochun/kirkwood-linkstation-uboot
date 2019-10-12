@@ -163,7 +163,7 @@ netboot_common (proto_t proto, cmd_tbl_t *cmdtp, int argc, char *argv[])
 		load_addr = simple_strtoul(s, NULL, 16);
 	}
 
-	switch (argc) {
+    switch (argc) {
 	case 1:
 		break;
 
@@ -187,7 +187,8 @@ netboot_common (proto_t proto, cmd_tbl_t *cmdtp, int argc, char *argv[])
 		return 1;
 	}
 
-	if ((size = NetLoop(proto)) < 0)
+	size = NetLoop(proto);
+	if (size < 0)
 		return 1;
 
 	/* NetLoop ok, update environment */

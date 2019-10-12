@@ -120,6 +120,34 @@ void dev_print (block_dev_desc_t *dev_desc)
 	} else {
 		puts ("            Capacity: not available\n");
 	}
+
+
+#if 0  /*def  CONFIG_BUFFALO_PLATFORM*/
+
+	if ((dev_desc->lba * dev_desc->blksz)>0L) {
+		unsigned char string_dev_p[50] ;
+		ulong mb, mb_quot, mb_rem, gb, gb_quot, gb_rem;
+		lbaint_t lba;
+
+		lba = dev_desc->lba;
+
+		lba512 = (lba * (dev_desc->blksz/512));
+		mb = (10 * lba512) / 2048;	/* 2048 = (1024 * 1024) / 512 MB */
+		/* round to 1 digit */
+		mb_quot	= mb / 10;
+		mb_rem	= mb - (10 * mb_quot);
+
+		gb = mb / 1024;
+		gb_quot	= gb / 10;
+		gb_rem	= gb - (10 * gb_quot);
+	sprintf(string_dev_p,"%s16.16Capa.:%ld GB           ",dev_desc->vendor,gb_quot) ;
+/*             "0123456789012345601234567890123456"*/
+	micon_printf(0,string_dev_p) ;
+	
+}
+#endif
+
+
 }
 #endif	/* CFG_CMD_IDE || CFG_CMD_SCSI || CFG_CMD_USB || CONFIG_MMC */
 
@@ -131,7 +159,8 @@ void dev_print (block_dev_desc_t *dev_desc)
 #if defined(CONFIG_MAC_PARTITION) || \
     defined(CONFIG_DOS_PARTITION) || \
     defined(CONFIG_ISO_PARTITION) || \
-    defined(CONFIG_AMIGA_PARTITION)
+    defined(CONFIG_AMIGA_PARTITION) || \
+    defined(CONFIG_EFI_PARTITION)
 
 void init_part (block_dev_desc_t * dev_desc)
 {
@@ -145,6 +174,14 @@ void init_part (block_dev_desc_t * dev_desc)
 #ifdef CONFIG_MAC_PARTITION
 	if (test_part_mac(dev_desc) == 0) {
 		dev_desc->part_type = PART_TYPE_MAC;
+		return;
+	}
+#endif
+
+/* must be placed before DOS partition detection */
+#ifdef CONFIG_EFI_PARTITION
+	if (test_part_efi(dev_desc) == 0) {
+		dev_desc->part_type = PART_TYPE_EFI;
 		return;
 	}
 #endif
@@ -203,6 +240,15 @@ int get_partition_info (block_dev_desc_t *dev_desc, int part, disk_partition_t *
 		return (0);
 	    }
 	    break;
+#endif
+
+#ifdef CONFIG_EFI_PARTITION
+	case PART_TYPE_EFI:
+		if (get_partition_info_efi(dev_desc,part,info) == 0) {
+			PRINTF ("## Valid EFI partition found ##\n");
+			return (0);
+		}
+		break;
 #endif
 	default:
 		break;
@@ -265,13 +311,22 @@ void print_part (block_dev_desc_t * dev_desc)
 	    print_part_amiga (dev_desc);
 	    return;
 #endif
+
+#ifdef CONFIG_EFI_PARTITION
+	case PART_TYPE_EFI:
+		PRINTF ("## Testing for valid EFI partition ##\n");
+		print_part_header ("EFI", dev_desc);
+		print_part_efi (dev_desc);
+		return;
+#endif
 	}
 	puts ("## Unknown partition table\n");
 }
 
 
-#else	/* neither MAC nor DOS nor ISO partition configured */
-# error neither CONFIG_MAC_PARTITION nor CONFIG_DOS_PARTITION nor CONFIG_ISO_PARTITION configured!
+#else	/* neither MAC nor DOS nor ISO nor EFI partition configured */
+# error neither CONFIG_MAC_PARTITION nor CONFIG_DOS_PARTITION
+# error nor CONFIG_ISO_PARTITION nor CONFIG_EFI_PARTITION configured!
 #endif
 
 #endif	/* (CONFIG_COMMANDS & CFG_CMD_IDE) || CONFIG_COMMANDS & CFG_CMD_SCSI) */

@@ -32,6 +32,17 @@
 #include <version.h>
 #include <net.h>
 
+#if defined(CONFIG_MARVELL)
+ extern int PTexist(void);
+ extern unsigned long mvFlash_init (void);
+ extern unsigned int whoAmI(void);
+ extern int cpuMapInit (void);
+#if defined(MV78200)
+ extern void second_cpu_realloc_and_load(void);
+#include "../board/mv_feroceon/common/mvTypes.h"
+#include "../board/mv_feroceon/mv_dd/dd_family/mv78200/mvSocUnitMap.h"
+#endif
+#endif
 #ifdef CONFIG_DRIVER_SMC91111
 #include "../drivers/smc91111.h"
 #endif
@@ -56,6 +67,9 @@ extern void dataflash_print_info(void);
 
 const char version_string[] =
 	U_BOOT_VERSION" (" __DATE__ " - " __TIME__ ")"CONFIG_IDENT_STRING;
+#if defined(CONFIG_BUFFALO_PLATFORM)
+const char buffalo_version_string[] = BUFFALO_VERSION;
+#endif
 
 #ifdef CONFIG_DRIVER_CS8900
 extern void cs8900_get_enetaddr (uchar * addr);
@@ -63,6 +77,10 @@ extern void cs8900_get_enetaddr (uchar * addr);
 
 #ifdef CONFIG_DRIVER_RTL8019
 extern void rtl8019_get_enetaddr (uchar * addr);
+#endif
+
+#if (CONFIG_COMMANDS & CFG_CMD_RCVR) 
+extern void recoveryCheck(void);
 #endif
 
 /*
@@ -75,12 +93,43 @@ static ulong mem_malloc_brk = 0;
 static
 void mem_malloc_init (ulong dest_addr)
 {
+#ifndef CONFIG_MARVELL
 	mem_malloc_start = dest_addr;
 	mem_malloc_end = dest_addr + CFG_MALLOC_LEN;
 	mem_malloc_brk = mem_malloc_start;
 
 	memset ((void *) mem_malloc_start, 0,
 			mem_malloc_end - mem_malloc_start);
+#else
+        unsigned int malloc_len;
+        char *env;
+
+#if defined(CONFIG_MARVELL) && defined(MV78200) && defined(DUAL_OS_SHARED_MEM_78200)
+		unsigned int cfg_malloc_len = CFG_MALLOC_LEN/2;
+		unsigned int cfg_malloc_base = CFG_MALLOC_BASE+(whoAmI()*cfg_malloc_len); 
+#else
+		unsigned int cfg_malloc_len = CFG_MALLOC_LEN;
+		unsigned int cfg_malloc_base = CFG_MALLOC_BASE;
+#endif
+		
+        env = getenv("MALLOC_len");
+        malloc_len =  simple_strtoul(env, NULL, 10) << 20;
+        if(malloc_len == 0)
+                malloc_len = cfg_malloc_len;
+  
+		mem_malloc_end = cfg_malloc_base + malloc_len;
+        printf("Addresses %dM - 0M are saved for the U-Boot usage.\n",mem_malloc_end >> 20);
+  
+        mem_malloc_start = cfg_malloc_base;
+        mem_malloc_brk = mem_malloc_start;
+  
+        printf("Mem malloc Initialization (%dM - %dM):",mem_malloc_end >> 20,
+                                                            mem_malloc_start >>20 );
+        memset ((void *) mem_malloc_start,0,mem_malloc_end - mem_malloc_start);
+  
+        printf(" Done\n");
+
+#endif
 }
 
 void *sbrk (ptrdiff_t increment)
@@ -129,6 +178,9 @@ static int display_banner (void)
 	printf ("IRQ Stack: %08lx\n", IRQ_STACK_START);
 	printf ("FIQ Stack: %08lx\n", FIQ_STACK_START);
 #endif
+#if defined(CONFIG_BUFFALO_PLATFORM)
+	printf("BUFFALO_%s\n", buffalo_version_string);
+#endif
 
 	return (0);
 }
@@ -140,6 +192,8 @@ static int display_banner (void)
  * gives a simple yet clear indication which part of the
  * initialization if failing.
  */
+#ifndef CONFIG_MARVELL
+
 static int display_dram_config (void)
 {
 	DECLARE_GLOBAL_DATA_PTR;
@@ -154,6 +208,8 @@ static int display_dram_config (void)
 
 	return (0);
 }
+
+#endif
 
 static void display_flash_config (ulong size)
 {
@@ -196,13 +252,31 @@ init_fnc_t *init_sequence[] = {
 	serial_init,		/* serial communications setup */
 	console_init_f,		/* stage 1 init of console */
 	display_banner,		/* say that we are here */
+#if defined(CONFIG_MARVELL) && defined(MV78XX0)
+	cpuMapInit,
+#endif
 	dram_init,		/* configure available RAM banks */
+#ifndef CONFIG_MARVELL
 	display_dram_config,
+#endif
 #if defined(CONFIG_VCMA9) || defined (CONFIG_CMC_PU2)
 	checkboard,
 #endif
 	NULL,
 };
+
+#if defined(CONFIG_MARVELL) && defined(MV78200)
+init_fnc_t *init_sequence_slave[] = {
+	cpu_init,		/* basic cpu dependent setup */
+	board_init,		/* basic board dependent setup */
+	interrupt_init,		/* set up exceptions */
+	env_init,
+	serial_init,		/* serial communications setup */
+	console_init_f,		/* stage 1 init of console */
+	display_banner,		/* say that we are here */
+	NULL,			/* Terminate this list */
+};
+#endif
 
 void start_armboot (void)
 {
@@ -211,15 +285,35 @@ void start_armboot (void)
 	ulong size;
 	init_fnc_t **init_fnc_ptr;
 	char *s;
+	char *env;
+	volatile unsigned int cpu = 0;
+	int nand_access = 0;
 #if defined(CONFIG_VFD) || defined(CONFIG_LCD)
 	unsigned long addr;
 #endif
-
 	/* Pointer is writable since we allocated a register for it */
+#ifndef	CONFIG_MARVELL
 	gd = (gd_t*)(_armboot_start - CFG_MALLOC_LEN - sizeof(gd_t));
+#else
+#if defined(CONFIG_MARVELL) && defined(MV78200)
+   /* Marvell Master CPU Boot */
+    cpu = whoAmI();
+#if !defined(DUAL_OS_78200)
+   if(cpu == 0)
+#endif
+#endif
+	gd = (gd_t*)(_armboot_start - sizeof(gd_t));
+#endif
 	/* compiler optimization barrier needed for GCC >= 3.4 */
 	__asm__ __volatile__("": : :"memory");
 
+#if defined(CONFIG_MARVELL) && defined(MV78200)
+   /* Marvell Master CPU Boot */
+#if !defined(DUAL_OS_78200)
+   if(cpu == 0)
+	{
+#endif
+#endif
 	memset ((void*)gd, 0, sizeof (gd_t));
 	gd->bd = (bd_t*)((char*)gd - sizeof(bd_t));
 	memset (gd->bd, 0, sizeof (bd_t));
@@ -231,10 +325,37 @@ void start_armboot (void)
 			hang ();
 		}
 	}
+	/* armboot_start is defined in the board-specific linker script */
+	mem_malloc_init (_armboot_start - CFG_MALLOC_LEN);
 
+
+#if !(defined(MV78200) && (defined(DUAL_OS_78200) || \
+	(defined(DUAL_OS_SHARED_MEM_78200) && !defined(MV_NAND_BOOT))))	
+#if (CONFIG_COMMANDS & CFG_CMD_NAND)
+    puts ("NAND:");
+    nand_init();		/* go init the NAND */
+#endif
+#endif
+	/* initialize environment */
+	env_relocate ();
+
+#if defined(MV78200) && (defined(DUAL_OS_78200) || defined(DUAL_OS_SHARED_MEM_78200))
+	env = getenv("cpu0_res");
+	if (env)
+		mvSocUnitMapFillTable(env, MASTER_CPU, strstr);
+	env = getenv("cpu1_res");
+	if (env)
+		mvSocUnitMapFillTable(env, SLAVE_CPU, strstr);
+#endif
+
+#ifndef CFG_NO_FLASH
 	/* configure available FLASH banks */
 	size = flash_init ();
+#if defined(CONFIG_MARVELL)
+	size += mvFlash_init ();
+#endif
 	display_flash_config (size);
+#endif /* CFG_NO_FLASH */
 
 #ifdef CONFIG_VFD
 #	ifndef PAGE_SIZE
@@ -262,12 +383,16 @@ void start_armboot (void)
 	gd->fb_base = addr;
 #endif /* CONFIG_LCD */
 
-	/* armboot_start is defined in the board-specific linker script */
-	mem_malloc_init (_armboot_start - CFG_MALLOC_LEN);
-
+#if defined(MV78200) && (defined(DUAL_OS_78200) || \
+	(defined(DUAL_OS_SHARED_MEM_78200) && !defined(MV_NAND_BOOT)))
 #if (CONFIG_COMMANDS & CFG_CMD_NAND)
-	puts ("NAND:");
-	nand_init();		/* go init the NAND */
+    /* Check in dual CPU system which CPU use nand */
+    if (mvSocUnitIsMappedToThisCpu(NAND_FLASH))
+    {
+    	puts ("NAND:");
+    	nand_init();		/* go init the NAND */
+    }
+#endif
 #endif
 
 #ifdef CONFIG_HAS_DATAFLASH
@@ -275,8 +400,14 @@ void start_armboot (void)
 	dataflash_print_info();
 #endif
 
-	/* initialize environment */
-	env_relocate ();
+#ifdef CFG_DIAG
+#define DIAGNOSTICS
+#ifdef DIAGNOSTICS
+       if( !strcmp(getenv("run_diag"), "yes") ||
+           !strcmp(getenv("run_diag"), "YES"))
+               run_diag();
+#endif
+#endif
 
 #ifdef CONFIG_VFD
 	/* must do this after the framebuffer is allocated */
@@ -284,7 +415,14 @@ void start_armboot (void)
 #endif /* CONFIG_VFD */
 
 	/* IP Address */
+#if defined(CONFIG_MARVELL) && defined(DUAL_OS_78200)
+	if(cpu == 0)
 	gd->bd->bi_ip_addr = getenv_IPaddr ("ipaddr");
+	else
+	    gd->bd->bi_ip_addr = getenv_IPaddr ("ipaddr2");
+#else
+	gd->bd->bi_ip_addr = getenv_IPaddr ("ipaddr");
+#endif
 
 	/* MAC Address */
 	{
@@ -317,7 +455,6 @@ void start_armboot (void)
 	/* miscellaneous platform dependent initialisations */
 	misc_init_r ();
 #endif
-
 	/* enable exceptions */
 	enable_interrupts ();
 
@@ -345,11 +482,77 @@ void start_armboot (void)
 #ifdef BOARD_LATE_INIT
 	board_late_init ();
 #endif
+#if (CONFIG_COMMANDS & CFG_CMD_SCSI)
+	puts ("SCSI:  ");
+	scsi_init ();
+#endif
 #if (CONFIG_COMMANDS & CFG_CMD_NET)
 #if defined(CONFIG_NET_MULTI)
 	puts ("Net:   ");
 #endif
 	eth_initialize(gd->bd);
+#endif
+#if (CONFIG_COMMANDS & CFG_CMD_RCVR)
+	recoveryCheck(); 
+#endif
+/* Cancle SILENT mode for prompt only */
+#if defined(CONFIG_MARVELL) && defined(CONFIG_SILENT_CONSOLE)
+	DECLARE_GLOBAL_DATA_PTR;
+	gd->flags &= ~GD_FLG_SILENT;
+#endif
+#if defined(CONFIG_MARVELL) && defined(MV78200)
+#if !defined(DUAL_OS_78200)
+   /* Marvell Second CPU Boot */
+    }
+    else
+    {
+	/* Master CPU global data */
+	gd_t *gd_master;	
+	gd_master = (gd_t*)(_armboot_start - sizeof(gd_t));	
+	/* Slave CPU global data */
+	gd = (gd_t*)(_armboot_start - _1M - sizeof(gd_t));
+	memset ((void *) gd, 0, sizeof (gd_t));
+	memcpy ((void *)gd, (const void *)gd_master, sizeof (gd_t));
+	gd->bd = (bd_t*)((char*)gd - sizeof(bd_t));
+	memset ((void *) gd->bd, 0, sizeof (bd_t));
+
+	/*copy the Global Data from the Master. */
+	memcpy ((void *)gd->bd, (const void *)gd_master->bd, sizeof (bd_t));
+	for (init_fnc_ptr = init_sequence_slave; *init_fnc_ptr; ++init_fnc_ptr) {
+		if ((*init_fnc_ptr)() != 0) {
+			hang ();
+		}
+	}
+	gd->env_addr = gd_master->env_addr;
+#if defined(DUAL_OS_SHARED_MEM_78200)
+	/* armboot_start is defined in the board-specific linker script */
+	mem_malloc_init (_armboot_start - CFG_MALLOC_LEN);
+	env = getenv("cpu0_res");
+	if (env)
+		mvSocUnitMapFillTable(env, MASTER_CPU, strstr);
+	env = getenv("cpu1_res");
+	if (env)
+		mvSocUnitMapFillTable(env, SLAVE_CPU, strstr);
+	gd->bd->bi_ip_addr = getenv_IPaddr ("ipaddr2");
+#endif
+	misc_init_r ();
+#if (CONFIG_COMMANDS & CFG_CMD_SCSI)
+	puts ("SCSI:  ");
+	scsi_init ();
+#endif
+
+#if (CONFIG_COMMANDS & CFG_CMD_NET)
+#if defined(CONFIG_NET_MULTI)
+	puts ("Net:   ");
+#endif
+	eth_initialize(gd->bd);
+#endif
+
+    }
+#endif
+	if (cpu == 0) {
+		second_cpu_realloc_and_load();
+	}	
 #endif
 	/* main_loop() can return to retry autoboot, if so just run it again. */
 	for (;;) {
