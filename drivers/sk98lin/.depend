@@ -1,0 +1,113 @@
+uboot_drv.o: uboot_drv.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/common.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/linux/bitops.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/asm/bitops.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/linux/types.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/linux/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/linux/posix_types.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/linux/stddef.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/asm/posix_types.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/asm/types.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/linux/string.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/asm/string.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/asm/ptrace.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/asm/proc/ptrace.h \
+  /opt/Orion-SDK/SDK-2.0-LE/tools/gcc/bin/../lib/gcc/arm-none-linux-gnueabi/4.2.0/include/stdarg.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/part.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/ide.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/flash.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/image.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/asm/u-boot.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/asm/global_data.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/asm/mach-types.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/asm/setup.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/asm/u-boot-arm.h
+uboot_skb.o: uboot_skb.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+sky2.o: sky2.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+skge.o: skge.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+sky2le.o: sky2le.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+skdim.o: skdim.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+skaddr.o: skaddr.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+skgehwt.o: skgehwt.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+skgeinit.o: skgeinit.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+skgesirq.o: skgesirq.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+sktwsi.o: sktwsi.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+sklm80.o: sklm80.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+skqueue.o: skqueue.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+skrlmt.o: skrlmt.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+sktimer.o: sktimer.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+skvpd.o: skvpd.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+skxmac2.o: skxmac2.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
+skcsum.o: skcsum.c \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/config.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/mv_kw.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/configs/../../board/mv_feroceon/mv_kw/mvSysHwConfig.h \
+  /home/motomi/subversion/NasFirmware/u-boot/branches/u-boot-1.1.4_kw_testwol/include/cmd_confdefs.h
